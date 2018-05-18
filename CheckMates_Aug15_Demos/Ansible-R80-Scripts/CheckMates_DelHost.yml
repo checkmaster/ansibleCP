@@ -1,0 +1,47 @@
+---
+- hosts: "localhost"
+  vars_files:
+  - vars_ohio.yml
+
+  tasks:
+  - name: "login"
+    check_point_mgmt:
+      command: login
+      parameters:
+        username: "{{mgmt_user}}"
+        password: "{{mgmt_password}}"
+        management: "{{mgmt_server}}"
+      fingerprint: "{{mgmt_fingerprint}}"
+    register: login_response
+
+  - name: "Remove CheckMatesDemo group"
+    check_point_mgmt:
+      command: delete-group
+      parameters:
+        name: "CheckMatesDemo"
+      session-data: "{{login_response}}"
+
+  - name: "Remove RyanHost1 Host"
+    check_point_mgmt:
+      command: delete-host
+      parameters:
+        name: "RyanHost1"
+      session-data: "{{login_response}}"
+
+  - name: "Remove RyanHost2 Host"
+    check_point_mgmt:
+      command: delete-host
+      parameters:
+        name: "RyanHost2"
+      session-data: "{{login_response}}"
+
+  - name: "publish"
+    check_point_mgmt:
+      command: publish
+      session-data: "{{login_response}}"
+
+  - name: "logout"
+    check_point_mgmt:
+      command: logout
+      session-data: "{{login_response}}"
+

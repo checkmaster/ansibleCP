@@ -1,0 +1,11 @@
+---
+- hosts: Gaia
+  gather_facts: no
+  connection: local  
+  tasks:
+
+  - name: "Delete interface {{interface}} and change state to off"
+    command: "{{ item }}"
+    with_items:
+      - clish -c 'set interface {{ interface }} state off' -s
+      - clish -c 'delete interface {{ interface }} ipv4-address' -s

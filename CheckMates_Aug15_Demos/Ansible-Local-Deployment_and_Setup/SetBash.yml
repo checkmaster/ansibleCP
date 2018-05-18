@@ -1,0 +1,16 @@
+---
+- hosts: "{{ target }}"
+  gather_facts: no
+  connection: local  
+  tasks:
+
+  - name: "set shell"
+    raw: set user admin shell /bin/bash 
+
+  - name: "save config"
+    raw: save config 
+
+  - name: Waiting for 65 seconds to clear SSH session
+    pause:
+      seconds: 65
+

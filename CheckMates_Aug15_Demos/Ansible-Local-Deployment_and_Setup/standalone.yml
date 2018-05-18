@@ -1,0 +1,29 @@
+---
+- hosts: Gaia
+  gather_facts: no
+  connection: local  
+  tasks:
+
+  - name: "Create config_system on the gateway"
+    raw: echo "config_system --config-string \"hostname={{ hostname }}&timezone='America/New_York'&install_security_managment=true&install_mgmt_primary=true&install_security_gw=true&gateway_daip=false&install_ppak=true&gateway_cluster_member=false&mgmt_admin_radio=gaia_admin&mgmt_gui_clients_radio=any&download_info=true\" >> ftw.output & " > /home/admin/ftwstart
+
+  - name: "Change permissions"
+    raw: chmod 755 ftwstart 
+
+  - name: "Run the FTW Setup"
+    command: "/bin/bash /home/admin/ftwstart" 
+
+  - name: Wait until the FTW completes
+    wait_for:
+      path: /etc/.wizard_accepted 
+    register: exists
+    until: exists|success
+    retries: 5
+    delay: 10
+
+  - name: Waiting for a minute before reboot
+    pause:
+      minutes: 1
+
+  - name: Rebooting 
+    command: "shutdown -r now"

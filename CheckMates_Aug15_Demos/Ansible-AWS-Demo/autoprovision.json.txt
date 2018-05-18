@@ -1,0 +1,38 @@
+{
+  "delay": 10,
+  "management": {
+    "name": "R80Mgmt",
+    "host": "localhost"
+  },
+  "templates": {
+    "Demo-template": {
+      "one-time-password": "vpn12345",
+      "version": "R77.30",
+      "policy": "CheckMates_Demo_Policy",
+      "specific-network": "aws_CheckMates_nets",
+      "ips": true,
+      "ips-profile": "Optimized",
+      "application-control": true,
+      "url-filtering": true,
+      "identity-awareness": true,
+      "color": "blue"
+    },
+    "Demo-template-scale": {
+      "one-time-password": "vpn12345",
+      "version": "R77.30",
+      "policy": "CheckMates_Demo_Policy",
+      "ips": true,
+      "ips-profile": "Optimized",
+      "identity-awareness": true,
+      "color": "blue"
+    }
+  },
+  "controllers": {
+    "aws-us-east-2": {
+      "class": "AWS",
+      "access-key": "AKXXXXXXXXXXXXXXNQ",
+      "secret-key": "1KsXXXXXXXXXXXXXXXXXXXXXHQH",
+      "regions": ["us-east-2"]
+    }
+  }
+}

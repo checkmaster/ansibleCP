@@ -1,0 +1,9 @@
+---
+
+- name: CheckMates Demo Deployment Cleanup
+  gather_facts: no
+  hosts: localhost
+- include: R80-DeletePolicy.yml 
+- include: R80-DeleteGateway.yml
+- include: CheckMates_VMware_Revert.yml
+

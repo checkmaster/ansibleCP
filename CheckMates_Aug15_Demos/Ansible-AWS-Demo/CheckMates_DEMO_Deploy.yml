@@ -1,0 +1,7 @@
+---
+
+- name: CheckMates Demo Deployment
+  hosts: localhost
+- include: CheckMates-aws-vpc-create.yml 
+- include: CheckMates-R80-Create.yml
+- include: CheckMates-r53-create.yml

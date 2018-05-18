@@ -1,0 +1,8 @@
+#!/bin/bash
+echo "Starting Rule Deletion"
+bash Delete_MyRules
+echo "Starting Host Deletion"
+bash Delete_MyHost
+echo "Starting Service Deletion"
+bash Delete_MyTCPServices
+

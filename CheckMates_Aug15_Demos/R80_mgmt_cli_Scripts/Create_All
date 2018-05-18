@@ -1,0 +1,8 @@
+#!/bin/bash
+echo "Starting Host Creation"
+bash Create_MyHost 
+echo "Starting Service Creation"
+bash Create_MyTCPServices 
+echo "Starting Rule Creation"
+bash Create_MyRules
+

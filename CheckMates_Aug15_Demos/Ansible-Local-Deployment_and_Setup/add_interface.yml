@@ -1,0 +1,11 @@
+---
+- hosts: "{{ target }}"
+  gather_facts: no
+  connection: local  
+  tasks:
+
+  - name: "Ccnfigure Interface {{ interface }} to {{ interface_ipv4 }}/{{ masklength }} and change state to on"
+    command: "{{ item }}"
+    with_items:
+      - clish -c 'set interface {{ interface }} ipv4-address {{ interface_ipv4 }} mask-length {{ masklength }}' -s
+      - clish -c 'set interface {{ interface }} state on' -s

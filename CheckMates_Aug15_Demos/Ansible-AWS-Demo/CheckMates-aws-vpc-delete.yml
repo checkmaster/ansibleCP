@@ -1,0 +1,86 @@
+---
+- hosts: localhost
+  vars_files:
+  - vars_ohio.yml
+
+  tasks:
+
+  - name: "Delete WebServer AutoScale Group"
+    ec2_asg:
+      name: CheckMates-WebServer-AS-Group
+      state: absent
+      launch_config_name: CheckMates-WebServer-AutoScale
+      region: "{{ region }}"
+
+  - name: "Delete Check Point AutoScale Group"
+    ec2_asg:
+      name: CheckMates-CHKP-AS-Group
+      state: absent
+      launch_config_name: CheckMates-WebServer-AutoScale 
+      region: "{{ region }}"
+
+  - name: "Delete External Load Balancer "
+    ec2_elb_lb:
+      name: ExternalELB
+      state: absent
+      region: "{{ region }}"
+
+  - name: "Delete Internal Load Balancer "
+    ec2_elb_lb:
+      name: InternalELB
+      state: absent
+      region: "{{ region }}"
+
+  - name: "Delete WebServer Launch Config "
+    ec2_lc:
+      name: CheckMates-WebServer-AutoScale
+      region: "{{ region }}"
+      state: absent
+
+  - name: "Delete Check Point Launch Config "
+    ec2_lc:
+      name: CheckMates-CHKP-AutoScale
+      region: "{{ region }}"
+      state: absent
+
+  - name: "Gather Facts"
+    ec2_remote_facts:
+      region: "{{ region }}"
+      filters:
+        instance-state-name: running
+        "tag:Name": CHKP-GW-Edge
+    register: ec2_facts
+
+  - name: Terminate CHKP Edge Instances
+    when: ec2_facts.instances|length > 0  
+    ec2:
+      state: 'absent'
+      instance_ids: "{{ ec2_facts.instances.0.id }}"
+      region:  "{{ region }}"     
+
+  - name: Delete CheckMates_Permissive_SG Security Group
+    ec2_group:
+      name: CheckMates_Permissive_SG
+      description: 'Permissive Security Group'
+      region:  "{{ region }}"
+      state: absent
+    register: SG_Delete
+    until: SG_Delete|success
+    retries: 30 
+    delay: 10
+
+  - ec2_vpc_net_facts:
+      region:  "{{ region }}"
+      filters:
+        "tag:Name": CheckMates-Demo-VPC
+    register: CheckMates_VPC
+
+  - name: Delete CheckMates_DEMO-VPC
+    when: CheckMates_VPC.vpcs|length > 0
+    ec2_vpc:
+      vpc_id: "{{ CheckMates_VPC.vpcs.0.id  }}"
+      region:  "{{ region }}"
+      resource_tags:  { "Name": "CheckMates-Demo-VPC" }
+      state: absent
+
+

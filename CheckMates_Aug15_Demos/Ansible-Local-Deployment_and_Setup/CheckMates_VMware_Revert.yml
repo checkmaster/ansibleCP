@@ -1,0 +1,18 @@
+---
+- hosts: localhost 
+  gather_facts: no
+  connection: local  
+  tasks:
+
+  - name: Revert to a snapshot
+    vmware_guest_snapshot:
+      hostname: 10.2.0.50 
+      username: root 
+      password: vpn1234
+      name: CheckMatesGW-R80.10
+      state: revert
+      snapshot_name: Before-FTW
+      datacenter: ha-datacenter
+      validate_certs: no
+    delegate_to: localhost
+

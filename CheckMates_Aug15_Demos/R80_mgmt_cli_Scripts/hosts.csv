@@ -1,0 +1,12 @@
+name,ip-address,color,tags
+CheckMatesLive_CSV_Host1,10.1.1.1,blue,myhost1
+CheckMatesLive_CSV_Host2,10.2.1.1,cyan,myhost2
+CheckMatesLive_CSV_Host3,10.3.1.1,khaki,myhost3
+CheckMatesLive_CSV_Host4,10.4.1.1,orchid,myhost4
+CheckMatesLive_CSV_Host5,10.5.1.1,pink,myhost5
+CheckMatesLive_CSV_Host6,10.6.1.1,dark blue,myhost6
+CheckMatesLive_CSV_Host7,10.7.1.1,gold,myhost7
+CheckMatesLive_CSV_Host8,10.8.1.1,lemon chiffon,myhost8
+CheckMatesLive_CSV_Host9,10.9.1.1,purple,myhost9
+CheckMatesLive_CSV_Host10,10.10.1.1,orange,myhost10
+

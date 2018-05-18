@@ -1,0 +1,2 @@
+export ansible_user='admin'
+export ansible_ssh_pass='vpn123'

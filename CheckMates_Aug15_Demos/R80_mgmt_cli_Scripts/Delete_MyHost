@@ -1,0 +1,11 @@
+#!/bin/bash
+Num=10
+Name=myCheckMatesLiveHost_
+mgmt_cli -r true login  > id.txt
+while [ $Num -gt 0 ]; do
+        mgmt_cli delete host name "$Name$Num" -s id.txt
+        let Num=Num-1
+done
+mgmt_cli publish -s id.txt
+mgmt_cli logout -s id.txt
+

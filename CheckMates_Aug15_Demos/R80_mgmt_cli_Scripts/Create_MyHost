@@ -1,0 +1,16 @@
+#!/bin/bash
+Num=10
+Name=myCheckMatesLiveHost_
+mgmt_cli -r true login  > id.txt
+while [ $Num -gt 0 ]; do
+#Adjust Color
+if [[ $(($Num % 2)) -eq 0 ]]; 
+   then color="crete blue"  
+   else color="aquamarine" 
+fi
+        mgmt_cli add host name "$Name$Num" ip-address "1.2.3.$Num" color "$color" -s id.txt
+        let Num=Num-1
+done
+mgmt_cli publish -s id.txt
+mgmt_cli logout -s id.txt
+

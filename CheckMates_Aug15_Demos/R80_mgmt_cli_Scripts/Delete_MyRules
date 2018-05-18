@@ -1,0 +1,6 @@
+#!/bin/bash
+mgmt_cli -r true login  > id.txt
+mgmt_cli delete package name "CheckMatesLive_Demo" -s id.txt
+mgmt_cli publish -s id.txt
+mgmt_cli logout -s id.txt
+

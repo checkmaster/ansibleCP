@@ -1,0 +1,1 @@
+mgmt_cli -r true delete-host --batch hosts_delete.csv

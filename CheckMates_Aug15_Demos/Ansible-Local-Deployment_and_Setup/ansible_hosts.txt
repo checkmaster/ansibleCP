@@ -1,0 +1,13 @@
+mgmt_server=10.2.0.158
+mgmt_user=api_user
+mgmt_password=vpn123
+mgmt_fingerprint=C2:F7:A0:B5:07:11:23:F1:CA:DE:A2:A0:A7:DE:C9:B4:03:12:F6:91
+
+[Gaia:vars]
+ansible_connection=ssh
+ansible_ssh_user=admin
+ansible_ssh_pass=vpn123
+ansible_python_interpreter=/opt/CPsuite-R80/fw1/Python/bin/python
+
+[Gaia]
+10.2.0.159 ansible_python_interpreter="/opt/CPsuite-R80/fw1/Python/bin/python"

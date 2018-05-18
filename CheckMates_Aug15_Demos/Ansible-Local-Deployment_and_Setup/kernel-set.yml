@@ -1,0 +1,17 @@
+---
+- hosts: Gaia
+  gather_facts: no
+  connection: local  
+  tasks:
+
+  - name: "Create fwkern.con if it does not exist"
+    copy:
+      content: ""
+      dest: "{{fwdirpath}}/boot/modules/fwkern.conf" 
+      force: no
+      mode: 0644
+
+  - name: "Add a kernel parameter to fwkern.conf"
+    lineinfile:
+      path: "{{fwdirpath}}/boot/modules/fwkern.conf" 
+      line: 'fwx_auth_expiration=240' 

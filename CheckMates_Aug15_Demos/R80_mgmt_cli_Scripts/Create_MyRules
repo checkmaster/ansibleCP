@@ -1,0 +1,17 @@
+#!/bin/bash
+Num=10
+Name=CheckMatesLive_Rule
+Host=myCheckMatesLiveHost_
+Service=myCheckMatesLive_TCP_
+
+mgmt_cli -r true login  > id.txt
+mgmt_cli add package name "CheckMatesLive_Demo" access true color "blue" threat-prevention false -s id.txt
+mgmt_cli set access-layer name "CheckMatesLive_Demo Network" applications-and-url-filtering true data-awareness true -s id.txt
+
+while [ $Num -gt 0 ]; do
+        mgmt_cli add access-rule layer "CheckMatesLive_DEMO Network" position "top" name "$Name $Num"  source "$Host$Num" service.1 "$Service$Num" action "Accept" track.type "Extended Log" -s id.txt
+        let Num=Num-1
+done
+mgmt_cli publish -s id.txt
+mgmt_cli logout -s id.txt
+

@@ -1,0 +1,260 @@
+---
+- hosts: "localhost"
+  vars_files:
+  - vars.yml
+
+  tasks:
+  - name: "login"
+    check_point_mgmt:
+      command: login
+      parameters:
+        username: "{{mgmt_user}}"
+        password: "{{mgmt_password}}"
+        management: "{{mgmt_server}}"
+      fingerprint: "{{mgmt_fingerprint}}"
+    register: login_response
+
+  - name: "create-new-policy-package"
+    check_point_mgmt:
+      command: add-package
+      parameters:
+        name: "CheckMates_Demo_Policy"
+        comments: "Created by ansible during CheckMates demo"
+        color: "green"
+        threat-prevention: "true"
+        access: "true"
+      session-data: "{{login_response}}"
+
+  - name: "add-internal-nets-group"
+    check_point_mgmt:
+      command: add-group
+      parameters:
+        name: "Check_Mates_nets"
+      session-data: "{{login_response}}"
+
+  - name: "add VPC External Subnet"
+    check_point_mgmt:
+      command: add-network
+      parameters:
+        name: "External"
+        subnet: "{{ external_subnet_cidr | ipaddr('network') }}" 
+        subnet-mask: "{{ external_subnet_cidr | ipaddr('netmask') }}"
+        color: "blue"
+      session-data: "{{login_response}}"
+
+  - name: "add VPC Internal Subnet"
+    check_point_mgmt:
+      command: add-network
+      parameters:
+        name: "Internal"
+        subnet: "{{ internal_subnet_cidr | ipaddr('network') }}" 
+        subnet-mask: "{{ internal_subnet_cidr | ipaddr('netmask') }}"
+        groups: "Check_Mates_nets"
+        color: "blue"
+      session-data: "{{login_response}}"
+
+  - name: "add VPC Web Server Subnet"
+    check_point_mgmt:
+      command: add-network
+      parameters:
+        name: "WebServers"
+        subnet: "{{ webserver_subnet_cidr | ipaddr('network') }}" 
+        subnet-mask: "{{ webserver_subnet_cidr | ipaddr('netmask') }}"
+        groups: "Check_Mates_nets"
+        color: "cyan"
+      session-data: "{{login_response}}"
+
+  - name: "add VPC DB Server Subnet"
+    check_point_mgmt:
+      command: add-network
+      parameters:
+        name: "DBServers"
+        subnet: "{{ database_subnet_cidr | ipaddr('network') }}" 
+        subnet-mask: "{{ database_subnet_cidr | ipaddr('netmask') }}"
+        groups: "Check_Mates_nets"
+        color: "cyan"
+      session-data: "{{login_response}}"
+
+  - name: "add VPC Load Balancer Subnet #1"
+    check_point_mgmt:
+      command: add-network
+      parameters:
+        name: "LoadBalancer1"
+        subnet: "{{ lb1_subnet_cidr | ipaddr('network') }}" 
+        subnet-mask: "{{ lb1_subnet_cidr | ipaddr('netmask') }}"
+        groups: "Check_Mates_nets"
+        color: "orange"
+      session-data: "{{login_response}}"
+
+  - name: "add VPC Load Balancer Subnet #2"
+    check_point_mgmt:
+      command: add-network
+      parameters:
+        name: "LoadBalancer2"
+        subnet: "{{ lb2_subnet_cidr | ipaddr('network') }}" 
+        subnet-mask: "{{ lb2_subnet_cidr | ipaddr('netmask') }}"
+        groups: "Check_Mates_nets"
+        color: "orange"
+      session-data: "{{login_response}}"
+
+  - name: "Add Hide Host"
+    check_point_mgmt:
+      command: add-host
+      parameters:
+        name: "CHKP-SG-Hide"
+        ip-address: "{{ perimeter_gw_external_ip }}"
+        color: "red"
+      session-data: "{{login_response}}"
+
+  - name: "add access section default drop"
+    check_point_mgmt:
+      command: add-access-section
+      parameters:
+        layer: "CheckMates_Demo_Policy Network"
+        name: "default drop"
+        position: "top"
+      session-data: "{{login_response}}"
+
+  - name: "add access section aws rules"
+    check_point_mgmt:
+      command: add-access-section
+      parameters:
+        layer: "CheckMates_Demo_Policy Network"
+        name: "AWS Rules"
+        position: "top"
+      session-data: "{{login_response}}"
+
+  - name: "add access rule for ICMP from Any Network"
+    check_point_mgmt:
+      command: add-access-rule
+      parameters:
+        layer: "CheckMates_Demo_Policy Network"
+        name: "Allow ICMP"
+        position:
+          top: "AWS Rules"
+        source:
+          - "any"
+        destination:
+          - "any"
+        service:
+          - "icmp-requests"
+        action: "accept"
+        track: "Log"
+      session-data: "{{login_response}}"
+
+  - name: "add access rule from AWS to any networks"
+    check_point_mgmt:
+      command: add-access-rule
+      parameters:
+        layer: "CheckMates_Demo_Policy Network"
+        name: "LoadBalancers"
+        position:
+          top: "AWS Rules"
+        source:
+          - "any"
+        destination:
+          - "LoadBalancer1"
+          - "LoadBalancer2"
+        service:
+          - "http"
+          - "https"
+        action: "accept"
+        track: "Log"
+      session-data: "{{login_response}}"
+
+  - name: "add access rule from AWS to any networks"
+    check_point_mgmt:
+      command: add-access-rule
+      parameters:
+        layer: "CheckMates_Demo_Policy Network"
+        name: "AWS WebServer Outbound Access"
+        position:
+          top: "AWS Rules"
+        source:
+          - "WebServers"
+        destination:
+          - "any"
+        service:
+          - "http"
+          - "https"
+          - "ntp"
+          - "dns"
+        action: "accept"
+        track: "Log"
+      session-data: "{{login_response}}"
+
+  - name: "add access rule for Web to DB networks"
+    check_point_mgmt:
+      command: add-access-rule
+      parameters:
+        layer: "CheckMates_Demo_Policy Network"
+        name: "AWS WebServer to DB"
+        position:
+          top: "AWS Rules"
+        source:
+          - "WebServers"
+        destination:
+          - "DBServers"
+        service:
+          - "MySQL"
+        action: "accept"
+        track: "Log"
+      session-data: "{{login_response}}"
+
+  - name: "add access rule for Internal to any networks"
+    check_point_mgmt:
+      command: add-access-rule
+      parameters:
+        layer: "CheckMates_Demo_Policy Network"
+        name: "AWS internal to Any"
+        position:
+          top: "AWS Rules"
+        source:
+          - "Internal"
+        destination:
+          - "any"
+        service:
+          - "any"
+        action: "accept"
+        track: "Log"
+      session-data: "{{login_response}}"
+
+  - name: "add access rule for External to any networks"
+    check_point_mgmt:
+      command: add-access-rule
+      parameters:
+        layer: "CheckMates_Demo_Policy Network"
+        name: "AWS external to Any"
+        position:
+          top: "AWS Rules"
+        source:
+          - "External"
+        destination:
+          - "any"
+        service:
+          - "any"
+        action: "accept"
+        track: "Log"
+      session-data: "{{login_response}}"
+
+  - name: "add NAT rule for Webserver "
+    check_point_mgmt:
+      command: add-nat-rule
+      parameters:
+        package: "CheckMates_Demo_Policy"
+        comments: "Webserver NAT"
+        position: "top"
+        original-source: "WebServers"
+        translated-source: "CHKP-SG-Hide"
+        method: "hide"
+      session-data: "{{login_response}}"
+
+  - name: "publish"
+    check_point_mgmt:
+      command: publish
+      session-data: "{{login_response}}"
+
+  - name: "logout"
+    check_point_mgmt:
+      command: logout
+      session-data: "{{login_response}}"

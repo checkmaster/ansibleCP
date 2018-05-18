@@ -1,0 +1,15 @@
+#!/bin/bash
+Num=10
+Name=myCheckMatesLive_TCP_
+mgmt_cli -r true login > id.txt
+while [ $Num -gt 0 ]; do
+if [[ $(($Num % 2)) -eq 0 ]];
+   then color="orange"
+   else color="red"
+fi
+
+        mgmt_cli add service-tcp name $Name$Num port 170$Num color "$color" -s id.txt
+        let Num=Num-1
+done
+mgmt_cli publish -s id.txt
+mgmt_cli logout -s id.txt

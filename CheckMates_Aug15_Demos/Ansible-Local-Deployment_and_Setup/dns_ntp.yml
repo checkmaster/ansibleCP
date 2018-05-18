@@ -1,0 +1,16 @@
+---
+- hosts: "{{ target }}"
+  gather_facts: no
+  connection: local
+  tasks:
+
+  - name: "Ccnfigure DNS and NTP Settings on Gateway"
+    command: "{{ item }}"
+    with_items:
+      - clish -c 'set dns primary 8.8.8.8' -s
+      - clish -c 'set dns secondary 8.8.4.4' -s
+      - clish -c 'set ntp server primary 0.pool.ntp.org version 4' -s
+      - clish -c 'set ntp server secondary 1.pool.ntp.org version 4' -s
+      - clish -c 'set ntp active on' -s
+
+

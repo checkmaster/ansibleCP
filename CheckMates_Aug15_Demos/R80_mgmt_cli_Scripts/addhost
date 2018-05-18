@@ -1,0 +1,1 @@
+mgmt_cli -r true add-host --batch hosts.csv

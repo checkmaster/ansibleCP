@@ -1,0 +1,11 @@
+---
+
+- name: CheckMates Demo Deployment
+  gather_facts: no
+  hosts: localhost
+- include: SetBash.yml  
+- include: add_interface.yml 
+- include: dns_ntp.yml
+- include: gateway_ftw.yml 
+- include: R80-CreatePolicy.yml
+- include: R80-CreateGateway.yml 

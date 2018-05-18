@@ -1,0 +1,353 @@
+---
+- hosts: localhost
+  vars_files:
+  - vars_ohio.yml
+
+  tasks:
+
+  - name: "Create VPC and Subnets for Demo" 
+    ec2_vpc_net:
+       name: CheckMates-Demo-VPC 
+       cidr_block: "{{ aws_vpc_cidr }}" 
+       region: "{{ region }}"
+    register: demo_vpc
+
+  - name: "Register new VPC Id in facts " 
+    set_fact:
+      vpc_id: "{{ demo_vpc.vpc.id }}"
+  
+
+  - name: Create external subnet for gateways 
+    ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc_id }}" 
+        cidr: "{{ aws_external_subnet_cidr }}" 
+        region: "{{ region }}"
+        az: "{{ primary_az }}"
+        resource_tags:
+          Name: CheckMates_External_Subnet
+    register: CheckMates_External_Subnet 
+
+  - name: Create Internal subnet for gateways
+    ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc_id }}"
+        cidr: "{{ aws_internal_subnet_cidr }}"
+        region: "{{ region }}"
+        az: "{{ primary_az }}"
+        resource_tags:
+          Name: CheckMates_Internal_Subnet
+    register: CheckMates_Internal_Subnet
+
+  - name: Create WebServer subnet 
+    ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc_id }}"
+        cidr: "{{ aws_webserver_subnet_cidr }}"
+        region: "{{ region }}"
+        az: "{{ primary_az }}"
+        resource_tags:
+          Name: CheckMates_Webserver_Subnet
+    register: CheckMates_Webserver_Subnet
+
+  - name: Create Database subnet 
+    ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc_id }}"
+        cidr: "{{ aws_database_subnet_cidr }}"
+        region: "{{ region }}"
+        az: "{{ primary_az }}"
+        resource_tags:
+          Name: CheckMates_Database_Subnet
+    register: CheckMates_Database_Subnet
+
+  - name: Create Load Balancer subnet1
+    ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc_id }}"
+        cidr: "{{ aws_lb1_subnet_cidr }}"
+        region: "{{ region }}"
+        az: "{{ primary_az }}"
+        resource_tags:
+          Name: CheckMates_LoadBalancer_Subnet1
+    register: CheckMates_LoadBalancer_Subnet1 
+
+  - name: Create Load Balancer subnet2
+    ec2_vpc_subnet:
+        state: present
+        vpc_id: "{{ vpc_id }}"
+        cidr: "{{ aws_lb2_subnet_cidr }}"
+        region: "{{ region }}"
+        az: "{{ secondary_az }}"
+        resource_tags:
+          Name: CheckMates_LoadBalancer_Subnet2
+    register: CheckMates_LoadBalancer_Subnet2
+
+  - name: Create AWS Internet Gateway
+    ec2_vpc_igw:
+      vpc_id: "{{ vpc_id }}" 
+      state: present
+      region: "{{ region }}"
+    register: igw
+
+  - name: Create Permissive Security Group
+    ec2_group:
+      name: CheckMates_Permissive_SG
+      description: Permissive Security Group
+      vpc_id: "{{ vpc_id }}"
+      region: "{{ region }}"
+      rules:
+        - proto: all
+          from_port: all
+          to_port: all
+          cidr_ip: 0.0.0.0/0
+    register: CheckMates_Permissive_SG
+
+  - name: Create Gateway External ENI
+    ec2_eni:
+      private_ip_address: "{{ perimeter_gw_external_ip }}" 
+      subnet_id: "{{ CheckMates_External_Subnet.subnet.id }}" 
+      state: present
+      source_dest_check: no
+      security_groups: "{{ CheckMates_Permissive_SG.group_id }}"
+      region: "{{ region }}"
+    register: External_ENI
+
+  - name: Create Gateway Internal ENI
+    ec2_eni:
+      private_ip_address: "{{ perimeter_gw_internal_ip }}"
+      subnet_id: "{{ CheckMates_Internal_Subnet.subnet.id }}"
+      state: present
+      source_dest_check: no
+      security_groups: "{{ CheckMates_Permissive_SG.group_id }}"
+      region: "{{ region }}"
+    register: Internal_ENI
+
+  - name: Tag the Internal ENI for AntiSpoofing
+    ec2_tag:
+      region: "{{ region }}"
+      resource: "{{ Internal_ENI.interface.id }}" 
+      state: present
+      tags:
+        x-chkp-topology: "{{ xchkp_topo }}"
+
+  - name: Find Latest Check Point R77.30 AMI in Region "{{ region }}"
+    ec2_ami_find:
+      name: "Check Point vSEC BYOL R77.30*"
+      sort: name
+      sort_order: descending
+      sort_end: 1
+      region: "{{ region }}"
+    register: ami_find_R80
+
+  - name: "Create CHKP Edge Instance"
+    ec2:
+       key_name: "{{ aws_keyname }}" 
+       instance_type: c4.large
+       image: "{{ ami_find_R80.results[0].ami_id }}" 
+       wait: yes
+       count: 1
+       region: "{{ region }}"
+       user_data: "{{ my_user_data }}"
+       network_interfaces: [ "{{ External_ENI.interface.id }}", "{{ Internal_ENI.interface.id }}" ]
+#       volumes:
+#         - device_name: /dev/xvda
+#           volume_type: io1
+#           iops: 2500
+#           volume_size: 50
+#           delete_on_termination: true
+       instance_tags:
+         Name: CHKP-GW-Edge
+         x-chkp-tags: management=R80Mgmt:template=Demo-template
+
+  - name: allocate a new elastic IP 
+    ec2_eip:
+      region: "{{ region }}"
+      in_vpc: yes
+      reuse_existing_ip_allowed: true
+      release_on_disassociation: true
+    register: eip
+
+  - name: output the IP
+    debug:
+      msg: "Allocated External IP is {{ eip.public_ip }}"
+
+  - name: Associate an elastic IP with a device
+    ec2_eip:
+      device_id: "{{ External_ENI.interface.id }}"
+      region: "{{ region }}"
+      ip: "{{ eip.public_ip }}"
+
+  - name: Set Forwarding on Gateway External ENI
+    ec2_eni:
+      private_ip_address: "{{ perimeter_gw_external_ip }}" 
+      subnet_id: "{{ CheckMates_External_Subnet.subnet.id }}"
+      state: present
+      source_dest_check: no
+      security_groups: "{{ CheckMates_Permissive_SG.group_id }}"
+      region: "{{ region }}"
+      delete_on_termination: true
+    register: External_ENI
+
+  - name: Set Forwarding on Gateway Internal ENI
+    ec2_eni:
+      private_ip_address: "{{ perimeter_gw_internal_ip }}"
+      subnet_id: "{{ CheckMates_Internal_Subnet.subnet.id }}"
+      state: present
+      source_dest_check: no
+      security_groups: "{{ CheckMates_Permissive_SG.group_id }}"
+      region: "{{ region }}"
+      delete_on_termination: true
+    register: Internal_ENI
+
+  - name: Set up Private subnet route table
+    ec2_vpc_route_table:
+      vpc_id: "{{ vpc_id }}" 
+      region: "{{ region }}"
+      tags:
+        Name: CheckMates_Internal_Route_Table
+      subnets:
+        - "{{ CheckMates_Webserver_Subnet.subnet.id }}"
+        - "{{ CheckMates_Database_Subnet.subnet.id }}"
+      routes:
+        - dest: 0.0.0.0/0
+          interface_id: "{{ Internal_ENI.interface.id  }}"
+    register: private_route_table
+
+  - name: Set up External subnet route table
+    ec2_vpc_route_table:
+      vpc_id: "{{ vpc_id }}"
+      region: "{{ region }}"
+      tags:
+        Name: CheckMates_External_Route_Table
+      subnets:
+        - "{{ CheckMates_External_Subnet.subnet.id }}"
+        - "{{ CheckMates_LoadBalancer_Subnet1.subnet.id }}"
+        - "{{ CheckMates_LoadBalancer_Subnet2.subnet.id }}"
+      routes:
+        - dest: 0.0.0.0/0
+          gateway_id: "{{ igw.gateway_id  }}"
+    register: public_route_table
+
+  - name: "Find Latest Ubuntu 16.04 AMI in Region {{ region }}" 
+    ec2_ami_find:
+      name: "ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-*"
+      sort: name
+      sort_order: descending
+      sort_end: 1
+      region: "{{ region }}"
+    register: ami_find_Ubuntu
+
+  - name: "Create CHKP Launch Config for Demo"
+    ec2_lc:
+        name: CheckMates-CHKP-AutoScale
+        image_id: "{{ ami_find_R80.results[0].ami_id }}"
+        key_name: "{{ aws_keyname }}"
+        security_groups: "{{ CheckMates_Permissive_SG.group_id }}"
+        instance_type: c4.large
+        user_data: "{{ my_user_data }}"
+        region: "{{ region }}"
+        ebs_optimized: true
+        assign_public_ip: true
+#        volumes:
+#        - device_name: /dev/xvda
+#          volume_size: 50
+#          device_type: io1
+#          iops: 2500
+#          delete_on_termination: true
+
+  - name: "Create WebServer Launch Config for Demo"
+    ec2_lc:
+        name: CheckMates-WebServer-AutoScale
+        image_id: "{{ ami_find_Ubuntu.results[0].ami_id }}"
+        key_name: "{{ aws_keyname }}" 
+        security_groups: "{{ CheckMates_Permissive_SG.group_id }}" 
+        instance_type: t2.micro
+        user_data: "{{ ubuntu_user_data }}"
+        region: "{{ region }}"
+        volumes:
+        - device_name: /dev/sda1
+          volume_size: 10
+          device_type: gp2
+          delete_on_termination: true
+
+  - name: "Create External ELB"
+    ec2_elb_lb:
+      name: "ExternalELB"
+      state: present
+      region: "{{ region }}"
+      listeners:
+        - protocol: http
+          load_balancer_port: 80
+          instance_port: 8090
+      subnets: 
+        - "{{ CheckMates_LoadBalancer_Subnet1.subnet.id }}"
+        - "{{ CheckMates_LoadBalancer_Subnet2.subnet.id }}" 
+      health_check:
+        ping_protocol: http # options are http, https, ssl, tcp
+        ping_port: 8090
+        ping_path: "/index.html" # not required for tcp or ssl
+        response_timeout: 5 # seconds
+        interval: 15 # seconds
+        unhealthy_threshold: 2
+        healthy_threshold: 2
+      security_group_ids: "{{ CheckMates_Permissive_SG.group_id }}" 
+
+  - name: "Create Internal ELB"
+    ec2_elb_lb:
+      name: "InternalELB"
+      scheme: internal
+      state: present
+      region: "{{ region }}"
+      listeners:
+        - protocol: http
+          load_balancer_port: 8090
+          instance_port: 80
+      subnets: 
+        - "{{ CheckMates_LoadBalancer_Subnet1.subnet.id }}"
+        - "{{ CheckMates_LoadBalancer_Subnet2.subnet.id }}"
+      tags:
+        x-chkp-tags: "management=R80Mgmt:template=Demo-template-scale"
+      health_check:
+        ping_protocol: http # options are http, https, ssl, tcp
+        ping_port: 80
+        ping_path: "/index.html" # not required for tcp or ssl
+        response_timeout: 5 # seconds
+        interval: 15 # seconds
+        unhealthy_threshold: 2
+        healthy_threshold: 2
+      security_group_ids: "{{ CheckMates_Permissive_SG.group_id }}" 
+
+  - name: Setup CHKP AutoScale Group
+    ec2_asg:
+      name: CheckMates-CHKP-AS-Group
+      launch_config_name: CheckMates-CHKP-AutoScale
+      replace_all_instances: no
+      min_size: 2
+      max_size: 3
+      desired_capacity: 2
+      load_balancers: ExternalELB
+      tags:
+        - Name: CHKP-AutoScale
+        - x-chkp-tags: management=R80Mgmt:template=Demo-template-scale
+      vpc_zone_identifier: 
+        - "{{ CheckMates_External_Subnet.subnet.id }}"
+      region: "{{ region }}"
+
+  - name: Setup Webserver AutoScale Group
+    ec2_asg:
+      name: CheckMates-WebServer-AS-Group
+      launch_config_name: CheckMates-WebServer-AutoScale
+      replace_all_instances: no
+      min_size: 5
+      max_size: 6
+      desired_capacity: 5
+      load_balancers: InternalELB
+      tags:
+        - Name: CheckMatesWebServer 
+        - Application: vSEC_Demo
+
+      vpc_zone_identifier: 
+        - "{{ CheckMates_Webserver_Subnet.subnet.id }}"
+      region: "{{ region }}"
+

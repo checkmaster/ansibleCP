@@ -1,0 +1,8 @@
+---
+
+- name: CheckMates Demo Deployment
+  hosts: localhost
+- include: CheckMates-r53-delete.yml
+- include: CheckMates-aws-vpc-delete.yml
+- include: CheckMates-R80-Delete.yml
+
