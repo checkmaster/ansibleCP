@@ -3,7 +3,7 @@
 # These VPCs, subnets, and gateways will be created as part of the demo
 mgmt_user: api_user
 password: vpn123 
-mgmt_server: 10.2.0.158
+mgmt_server: 
 mgmt_fingerprint: 98:93:15:0F:21:19:F0:06:7E:90:17:F9:78:D4:8B:3E:00:DF:23:CE
 vpc_cidr: 10.2.0.0/16
 external_subnet_cidr: 10.2.0.0/24

@@ -3,7 +3,7 @@
 # These VPCs, subnets, and gateways will be created as part of the demo
 
 #R80_Vars
-mgmt_server: 10.17.0.11
+mgmt_server: 
 mgmt_user: api_user
 mgmt_password: vpn123
 #use api fingerprint on the R80 management server to get the fingerprint
