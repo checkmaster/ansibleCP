@@ -7,12 +7,12 @@ mgmt_server:
 mgmt_user: api_user
 mgmt_password: vpn123
 #use api fingerprint command on the R80 management server to get the fingerprint
-mgmt_fingerprint: 38:92:18:15:63:F6:84:3A:A2:75:61:3D:A6:9C:83:07:55:56:AE:90 
+mgmt_fingerprint:  
 #DataCenter Name in R80/R80.10 for the AWS DataCenter Object
 R80_AWS_DataCenter: "AWS_Ohio"
 
-region: us-east-2
-aws_keyname: AWS-mysshkey
+region: us-west-1
+aws_keyname: TestNorthCal
 aws_vpc_name: CheckMates-Demo-VPC1
 aws_vpc_cidr: 10.20.0.0/16
 aws_external_subnet_cidr: 10.20.0.0/24
