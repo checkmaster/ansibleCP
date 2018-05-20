@@ -5,7 +5,7 @@
 #R80_Vars
 mgmt_server: 
 mgmt_user: api_user
-mgmt_password: vpn123
+mgmt_password: Cpwins1!
 #use api fingerprint command on the R80 management server to get the fingerprint
 mgmt_fingerprint:  
 #DataCenter Name in R80/R80.10 for the AWS DataCenter Object
